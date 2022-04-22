@@ -16,8 +16,11 @@ Here is an example of how to use IEvent, IEventApplier and IAggregatedRoot:
 
 First, register the event resolver and all aggregate roots that you're going to use.
 ```
-services.AddEventResolver(Assembly.GetExecutingAssembly()); // specify which assemblies to be searched for IEventAppliers
-services.AddTransient<IAggregateRoot<ShippingOrder>, AggregateRoot<ShippingOrder>>(); // ONLY TRANSIENT
+// specify which assemblies to be searched for IEventAppliers
+services.AddEventResolver(Assembly.GetExecutingAssembly());
+
+// ONLY TRANSIENT
+services.AddTransient<IAggregateRoot<ShippingOrder>, AggregateRoot<ShippingOrder>>(); 
 ```
 
 ```
