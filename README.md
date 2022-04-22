@@ -14,44 +14,54 @@ EsFramework is composed out of three actors: IEvent, IEventApplier<TEvent, TEnti
 
 Here is an example of how to use IEvent, IEventApplier and IAggregatedRoot:
 
+First, register the event resolver and all aggregate roots that you're going to use.
 ```
-Event OrderCanceled : IEvent
+services.AddEventResolver(Assembly.GetExecutingAssembly()); // specify which assemblies to be searched for IEventAppliers
+services.AddTransient<IAggregateRoot<ShippingOrder>, AggregateRoot<ShippingOrder>>(); // ONLY TRANSIENT
+```
+
+```
+class OrderCanceled : IEvent
 {
-	Int Version;
+	public int Version { get; set; }
 }
 ```
   
 ```
-EventApplier OrderCanceledApplier : IEventApplier<OrderCanceled, Order>
+class OrderCanceledApplier : IEventApplier<OrderCanceled, Order>
 {
-	Void Apply(OrderCanceled event, Order entity)
+	public Task Apply(OrderCanceled event, Order entity)
 	{
 		entity.Status = OrderStatus.Canceled;
+		return Task.CompletedTask;
 	}
 }
 ```
   
 ```
-Void CancelOrderCommandHandler
+class CancelOrderCommandHandler
 {
-	IAggregatedRoot<Order> aggregatedRoot;
-	IOrdersRepository repository;
+	private readonly IAggregatedRoot<Order> aggregatedRoot;
+	private readonly IOrdersRepository repository;
 
-	Ctor(IAggregatedRoot<Order> aggregatedRoot, IOrdersRepository repository)
+	CancelOrderCommandHandler(IAggregatedRoot<Order> aggregatedRoot, IOrdersRepository repository)
 	{
 		this.AggregatedRoot = aggregatedRoot;
 		this.repository = repository;
 	}
 	
-	Void Handle(string orderId)
+	public async Task Handle(string orderId)
 	{
-		var previusEvents = repository.GetEvents(orderId);
-		aggregatedRoot.ApplyEvents(previousEvents);
+		var previusEvents = await repository.GetEvents(orderId);
+		await aggregatedRoot.ApplyEvents(previousEvents);
 		
-		var orderCanceledEvent = new OrderCanceledEvent { Version = aggregatedRoot.LastVersion + 1 }
-		aggregatedRoot.Apply(orderCanceledEvent);
-		
-		repository.AppendEvent(orderId, orderCanceledEvent);
+		var orderCanceledEvent = new OrderCanceledEvent 
+		{
+			Version = aggregatedRoot.LastVersion + 1
+		};
+	
+		await aggregatedRoot.Apply(orderCanceledEvent);
+		await repository.AppendEvent(orderId, orderCanceledEvent);
 	}
 }
 ```
